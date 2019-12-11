@@ -1,5 +1,5 @@
 
-var autofill, place;
+var autofillBill, autofillShip, place;
 jQuery(document).ready(function () {
 	if(jQuery('#search_address_google').length > 0) {
 
@@ -22,14 +22,15 @@ function fillData(billing_sel_country){
 			types: ['address'],
 			componentRestrictions: {country: billing_sel_country.toLowerCase()}
 		};
-		autofill = new google.maps.places.Autocomplete((document.getElementById('search_address_google')), options);
-		google.maps.event.addListener(autofill, 'place_changed', fillInBillingAddress );
-		google.maps.event.addListener(autofill, 'place_changed', fillInShippingAddress );
+		autofillBill = new google.maps.places.Autocomplete((document.getElementById('search_address_google')), options);
+		autofillShip = new google.maps.places.Autocomplete((document.getElementById('shipping_search_address_google')), options);
+		google.maps.event.addListener(autofillBill, 'place_changed', fillInBillingAddress );
+		google.maps.event.addListener(autofillShip, 'place_changed', fillInShippingAddress );
 	}
 }
 
 function fillInBillingAddress(){
-	var place = autofill.getPlace();
+	var place = autofillBill.getPlace();
 
 	jQuery('#billing_postcode').val('');
 	jQuery('#billing_address_2').val('');
@@ -98,7 +99,7 @@ function fillInBillingAddress(){
 
 function fillInShippingAddress() {
 
-	place = autofill.getPlace();
+	place = autofillShip.getPlace();
 
 	jQuery('#shipping_postcode').val('');
 	jQuery('#shipping_address_1').val('');
