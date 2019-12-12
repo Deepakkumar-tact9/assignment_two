@@ -118,7 +118,6 @@ final class AsignTwo_plugin {
 		}
 
 		$map_address = str_replace( array( ',', ' ' ), '+', $map_address );
-
 		ob_start();
 		?>
 		<iframe class="custom_map" src="https://maps.google.com/maps?f=q&source=s_q&hl=en&geocode=&q=<?php echo $map_address ?>&z=14&output=embed"></iframe>
