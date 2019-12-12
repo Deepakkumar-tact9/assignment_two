@@ -1,165 +1,115 @@
-
-var autofillBill, autofillShip, place;
 jQuery(document).ready(function () {
-	if(jQuery('#search_address_google').length > 0) {
+	var autofillBill, autofillShip;
+	if (jQuery('#search_address_google, #shipping_search_address_google').length > 0) {
 
-		var billing_sel_country = jQuery("#billing_country").children("option:selected").val();
-		fillData(billing_sel_country);
+		var billingFields = {
+			address_1: '#billing_address_1',
+			address_2: '#billing_address_2',
+			postcode: '#billing_postcode',
+			city: '#billing_city',
+			state: '#billing_state'
+		};
+
+		var shippingFields = {
+			address_1: '#shipping_address_1',
+			address_2: '#shipping_address_2',
+			postcode: '#shipping_postcode',
+			city: '#shipping_city',
+			state: '#shipping_state'
+		};
+
+		var bill_sel_country = jQuery("#billing_country").children("option:selected").val();
+		var ship_sel_country = jQuery("#shipping_country").children("option:selected").val();
+
 		jQuery("#billing_country").change(function () {
-			billing_sel_country = jQuery(this).children("option:selected").val();
-			fillData(billing_sel_country);
+			bill_sel_country = jQuery(this).children("option:selected").val();
 		});
+
+		jQuery("#shipping_country").change(function () {
+			ship_sel_country = jQuery(this).children("option:selected").val();
+		});
+
+		var billoptions = { types: ['address'], componentRestrictions: {country: bill_sel_country.toLowerCase()} };
+		var shipoptions = { types: ['address'], componentRestrictions: {country: ship_sel_country.toLowerCase()} };
+
+		autofillBill = new google.maps.places.Autocomplete((document.getElementById('search_address_google')), billoptions);
+		autofillShip = new google.maps.places.Autocomplete((document.getElementById('shipping_search_address_google')), shipoptions);
 	}
+
+	jQuery("#search_address_google, #shipping_search_address_google").change(function () {
+		var $this = jQuery(this);
+		if ($this.attr('id') == 'search_address_google') {
+			google.maps.event.addListener(autofillBill, 'place_changed', updateField(billingFields));
+		} else {
+			google.maps.event.addListener(autofillShip, 'place_changed', updateField(shippingFields));
+
+		}
+	});
 });
 
-function fillData(billing_sel_country){
-	var countries;
-	if (ship_country.ship_countries.length > 0 && ship_country.ship_countries !== undefined) {
-		countries = ship_country.ship_countries;
+function updateField(fieldsArray) {
+
+	if (fieldsArray['address_1'] == '#billing_address_1') {
+		var place = autofillBill.getPlace();
+	} else {
+		var place = autofillShip.getPlace();
 	}
-	if(jQuery.inArray(billing_sel_country.toLowerCase(), countries) !== -1) {
-		var options = {
-			types: ['address'],
-			componentRestrictions: {country: billing_sel_country.toLowerCase()}
-		};
-		autofillBill = new google.maps.places.Autocomplete((document.getElementById('search_address_google')), options);
-		autofillShip = new google.maps.places.Autocomplete((document.getElementById('shipping_search_address_google')), options);
-		google.maps.event.addListener(autofillBill, 'place_changed', fillInBillingAddress );
-		google.maps.event.addListener(autofillShip, 'place_changed', fillInShippingAddress );
-	}
-}
 
-function fillInBillingAddress(){
-	var place = autofillBill.getPlace();
+	if (place.address_components.length > 0) {
+		var f_address_1 = fieldsArray['address_1'];
+		var f_address_2 = fieldsArray['address_2'];
+		var f_postcode = fieldsArray['postcode'];
+		var f_city = fieldsArray['city'];
+		var f_state = fieldsArray['state'];
 
-	jQuery('#billing_postcode').val('');
-	jQuery('#billing_address_2').val('');
-	jQuery('#billing_address_1').val('');
-	jQuery('#billing_city').val('');
-	jQuery('#billing_phone').val('');
-	jQuery('#billing_company').val('');
+		for (var i = 0; i < place.address_components.length; i++) {
 
-	for (var i = 0; i < place.address_components.length; i++) {
+			var addressType = place.address_components[i].types[0];
 
-		var addressType = place.address_components[i].types[0];
-		// filling country field
-		if(addressType == 'country'){
-			jQuery('#billing_country').val(place.address_components[i]['short_name']);
-			jQuery('#billing_country').trigger('change');
-		}
-		// filling street address field
-		if(addressType == 'street_number'){
-			jQuery('#billing_address_1').val(place.address_components[i]['long_name']);
-		} else {
-			if( typeof ( place.address_components[i].types[1] != "undefined" ) ) {
-				if( place.address_components[i].types[1] == 'sublocality' ) {
-					jQuery('#billing_address_1').val(place.address_components[i]['long_name']);
+			// filling street address field
+			if (addressType == 'street_number') {
+				jQuery(f_address_1).val(place.address_components[i]['long_name']);
+			} else {
+				if (typeof (place.address_components[i].types[1] != "undefined")) {
+					if (place.address_components[i].types[1] == 'sublocality') {
+						jQuery(f_address_1).val(place.address_components[i]['long_name']);
+					}
 				}
 			}
-		}
-		// adding data to street address field
-		if(addressType == 'route') {
-			var addr = jQuery('#billing_address_1').val();
-			if(addr != ''){
-				addr = addr +' '+ place.address_components[i]['long_name'];
-				jQuery('#billing_address_1').val(addr);
-			} else {
-				jQuery('#billing_address_1').val(place.address_components[i]['long_name']);
-			}
-		}
 
-		// filling state field
-		if(addressType == 'administrative_area_level_1'){
-			var state = place.address_components[i]['short_name'];
-			setTimeout(function explode(){
-				jQuery('#billing_state').val(state);
-				jQuery('#billing_state').trigger('change');
-			},500);
-		}
-
-		// filling second address field
-		if(addressType == 'neighborhood'){
-			jQuery('#billing_address_2').val(place.address_components[i]['long_name']);
-		} else if(addressType == 'sublocality_level_3'){
-			jQuery('#billing_address_2').val(place.address_components[i]['long_name']);
-		} else if(addressType == 'sublocality_level_2'){
-			jQuery('#billing_address_2').val(place.address_components[i]['long_name']);
-		}
-
-		// filling location
-		if(addressType == 'locality'){
-			jQuery('#billing_city').val(place.address_components[i]['long_name']);
-		}
-		// filling postal code
-		if(addressType == 'postal_code') {
-			jQuery('#billing_postcode').val(place.address_components[i]['long_name']);
-		}
-	}
-}
-
-function fillInShippingAddress() {
-
-	place = autofillShip.getPlace();
-
-	jQuery('#shipping_postcode').val('');
-	jQuery('#shipping_address_1').val('');
-	jQuery('#shipping_address_2').val('');
-	jQuery('#shipping_city').val('');
-	jQuery('#shipping_company').val('');
-
-	for (var i = 0; i < place.address_components.length; i++) {
-		var addressType = place.address_components[i].types[0];
-		// filling country field
-		if(addressType == 'country'){
-			jQuery('#shipping_country').val(place.address_components[i]['short_name']);
-			jQuery('#shipping_country').trigger('change');
-		}
-		// filling street address field
-		if(addressType == 'street_number'){
-			jQuery('#shipping_address_1').val(place.address_components[i]['long_name']);
-		} else {
-			if( typeof ( place.address_components[i].types[1] != "undefined" ) ) {
-				if( place.address_components[i].types[1] == 'sublocality' ) {
-					jQuery('#shipping_address_1').val(place.address_components[i]['long_name']);
+			// adding data to street address field
+			if (addressType == 'route') {
+				var addr = jQuery(f_address_1).val();
+				if (addr != '') {
+					addr = addr + ' ' + place.address_components[i]['long_name'];
+					jQuery(f_address_1).val(addr);
+				} else {
+					jQuery(f_address_1).val(place.address_components[i]['long_name']);
 				}
 			}
-		}
-		// adding data to street address field
-		if(addressType == 'route') {
-			var addr = jQuery('#shipping_address_1').val();
-			if(addr != ''){
-				addr = addr +' '+ place.address_components[i]['long_name'];
-				jQuery('#shipping_address_1').val(addr);
-			} else {
-				jQuery('#shipping_address_1').val(place.address_components[i]['long_name']);
+
+			// filling state field
+			if (addressType == 'administrative_area_level_1') {
+				jQuery(f_state).val(place.address_components[i]['short_name']);
+			}
+
+			// filling second address field
+			if (addressType == 'neighborhood') {
+				jQuery(f_address_2).val(place.address_components[i]['long_name']);
+			} else if (addressType == 'sublocality_level_3') {
+				jQuery(f_address_2).val(place.address_components[i]['long_name']);
+			} else if (addressType == 'sublocality_level_2') {
+				jQuery(f_address_2).val(place.address_components[i]['long_name']);
+			}
+
+			// filling location
+			if (addressType == 'locality') {
+				jQuery(f_city).val(place.address_components[i]['long_name']);
+			}
+			// filling postal code
+			if (addressType == 'postal_code') {
+				jQuery(f_postcode).val(place.address_components[i]['long_name']);
 			}
 		}
-
-		// filling state field
-		if(addressType == 'administrative_area_level_1'){
-			var state = place.address_components[i]['short_name'];
-			setTimeout(function explode(){
-				jQuery('#shipping_state').val(state);
-				jQuery('#shipping_state').trigger('change');
-			},1500);
-		}
-
-		if(addressType == 'neighborhood'){
-			jQuery('#shipping_address_2').val(place.address_components[i]['long_name']);
-		} else if(addressType == 'sublocality_level_3'){
-			jQuery('#shipping_address_2').val(place.address_components[i]['long_name']);
-		} else if(addressType == 'sublocality_level_2'){
-			jQuery('#shipping_address_2').val(place.address_components[i]['long_name']);
-		}
-
-		// filling location
-		if(addressType == 'locality'){
-			jQuery('#shipping_city').val(place.address_components[i]['long_name']);
-		}
-		// filling postal code
-		if(addressType == 'postal_code'){
-			jQuery('#shipping_postcode').val(place.address_components[i]['long_name']);
-		}
-
 	}
 }
